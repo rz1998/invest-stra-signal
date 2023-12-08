@@ -2,7 +2,7 @@
  * @Author: rz1998 rz1998@126.com
  * @Date: 2023-08-03 12:38:12
  * @LastEditors: rz1998 rz1998@126.com
- * @LastEditTime: 2023-12-08 09:49:46
+ * @LastEditTime: 2023-12-08 16:13:53
  * @FilePath: /signal/util.go
  * @Description:
  *
@@ -11,9 +11,12 @@ package signal
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/rz1998/invest-stra-signal/types/signalStra"
 )
+
+const TopicSignalDataUpdated = "signal/dataUpdated/"
 
 // FromSignal2CSV 信号转换为csv
 func FromSignal2CSV(signals []*signalStra.SSignalStra) string {
@@ -28,4 +31,8 @@ func FromSignal2CSV(signals []*signalStra.SSignalStra) string {
 		}
 	}
 	return contents
+}
+
+func TopicSignalDataUpdate(ucData string) string {
+	return fmt.Sprintf("%s%s", TopicSignalDataUpdated, strings.ReplaceAll(ucData, ".", "/"))
 }
