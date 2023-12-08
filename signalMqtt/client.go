@@ -1,32 +1,33 @@
-package signalDataMqtt
+package signalmqtt
 
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
-	"github.com/rz1998/invest-stra-signal/types/signalData"
+	"github.com/rz1998/invest-stra-signal/types/signalConfig"
 	"github.com/zeromicro/go-zero/core/logx"
-	"time"
 )
 
-type ApiSignalDataMqtt struct {
-	Config       ConfApiSignal
-	FuncOnSignal func(topic string, signal *signalData.SSignalDataUpdated)
+type ApiSignalClientMqtt[S any] struct {
+	Config       signalConfig.ConfApiSignal
+	FuncOnSignal func(topic string, signals []*S)
 	clientMqtt   *mqtt.Client
 }
 
-func (api *ApiSignalDataMqtt) Start() {
+func (api *ApiSignalClientMqtt[S]) Start() {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", api.Config.Mqtt.Broker, api.Config.Mqtt.Port))
+	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", api.Config.PMqtt.Broker, api.Config.PMqtt.Port))
 	// uuid
 	u1, err := uuid.NewUUID()
 	if err != nil {
 		logx.Error("clientMqtt uuid error", err)
 	}
 	opts.SetClientID(u1.String())
-	opts.SetUsername(api.Config.Mqtt.Usr)
-	opts.SetPassword(api.Config.Mqtt.Psw)
+	opts.SetUsername(api.Config.PMqtt.Usr)
+	opts.SetPassword(api.Config.PMqtt.Psw)
 	opts.AutoReconnect = true
 	opts.OnReconnecting = func(client mqtt.Client, options *mqtt.ClientOptions) {
 		logx.Info("clientMqtt reconnecting...")
@@ -49,7 +50,7 @@ func (api *ApiSignalDataMqtt) Start() {
 	}
 }
 
-func (api *ApiSignalDataMqtt) Stop() {
+func (api *ApiSignalClientMqtt[S]) Stop() {
 	if api.clientMqtt != nil {
 		if token := (*api.clientMqtt).Unsubscribe(api.Config.Topics...); token.Wait() && token.Error() != nil {
 			logx.Error("clientMqtt error disconnecting", token.Error())
@@ -61,45 +62,33 @@ func (api *ApiSignalDataMqtt) Stop() {
 	}
 }
 
-func (api *ApiSignalDataMqtt) SubSignal(topics []string) {
+func (api *ApiSignalClientMqtt[S]) SubSignal(topics []string) {
 	logx.Info("clientMqtt", "SubSignal", topics)
-	if len(topics) == 0 {
-		return
-	}
 	filters := make(map[string]byte)
 	for _, topic := range topics {
 		filters[topic] = 2
 	}
 	token := (*api.clientMqtt).SubscribeMultiple(filters, func(client mqtt.Client, message mqtt.Message) {
 		// 解析signals
-		var signal *signalData.SSignalDataUpdated
-		err := json.Unmarshal(message.Payload(), &signal)
+		var signals []*S
+		err := json.Unmarshal(message.Payload(), &signals)
 		if err != nil {
 			logx.Error("handlerSignals parse json error", err)
 		}
-		if signal == nil {
-			fmt.Println("handlerSignals stopped by no signals")
+		if len(signals) == 0 {
+			logx.Error("handlerSignals stopped by no signals")
 			return
 		}
 		strSignal := ""
-		strSignal += fmt.Sprintf("%+v, ", *signal)
+		for _, signal := range signals {
+			strSignal += fmt.Sprintf("%+v, ", *signal)
+		}
 		logx.Info("clientMqtt receiving", strSignal)
-		api.OnSignal(message.Topic(), signal)
+		api.OnSignal(message.Topic(), signals)
 	})
 	token.Wait()
 }
 
-func (api *ApiSignalDataMqtt) OnSignal(topic string, signal *signalData.SSignalDataUpdated) {
-	api.FuncOnSignal(topic, signal)
-}
-
-func (api *ApiSignalDataMqtt) PubSignal(topic string, signal *signalData.SSignalDataUpdated) {
-	if signal == nil {
-		return
-	}
-	jsonData, _ := json.Marshal(signal)
-	token := (*api.clientMqtt).Publish(
-		topic,
-		2, false, string(jsonData))
-	token.Wait()
+func (api *ApiSignalClientMqtt[S]) OnSignal(topic string, signals []*S) {
+	api.FuncOnSignal(topic, signals)
 }
