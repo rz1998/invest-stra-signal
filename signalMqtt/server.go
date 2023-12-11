@@ -2,12 +2,12 @@
  * @Author: rz1998 rz1998@126.com
  * @Date: 2023-12-08 10:34:48
  * @LastEditors: rz1998 rz1998@126.com
- * @LastEditTime: 2023-12-08 10:36:15
+ * @LastEditTime: 2023-12-11 11:28:34
  * @FilePath: /signal/signalMqtt/server.go
  * @Description:
  *
  */
-package signalmqtt
+package signalMqtt
 
 import (
 	"encoding/json"

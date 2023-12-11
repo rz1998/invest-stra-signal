@@ -1,4 +1,13 @@
-package signalmqtt
+/*
+ * @Author: rz1998 rz1998@126.com
+ * @Date: 2023-12-08 09:51:48
+ * @LastEditors: rz1998 rz1998@126.com
+ * @LastEditTime: 2023-12-11 11:28:31
+ * @FilePath: /signal/signalMqtt/client.go
+ * @Description:
+ *
+ */
+package signalMqtt
 
 import (
 	"encoding/json"
